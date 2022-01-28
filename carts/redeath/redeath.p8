@@ -4,15 +4,19 @@ __lua__
 -- main
 -- The loop
 game_objects = {}
-
-function _init()
-
-end
+actions = {}
 
 function _update()
 	for go in all(game_objects) do
 		go:update()
 	end
+	for c in all(actions) do
+		if costatus(c) then
+		  coresume(c)
+		else
+		  del(actions,c)
+		end
+	  end
 end
 
 function _draw()
@@ -61,28 +65,35 @@ function player:is_at_target()
 	return self.position.x == self.target.x and self.position.y == self.target.y
 end
 
-
 function player:move_towards_target()
-	printh("Moving towards target")
-	-- local c = cocreate(function()
-	-- 	while(not self:is_at_target()) do
-	-- 		if(self.target.x > self.position.x) do
-	-- 			self.position.x += 1
-	-- 		else if(self.target.x < self.position.x) do
-	-- 			self.position.x -= 1
-	-- 		end
-	-- 		if(self.target.y > self.position.y) do
-	-- 			self.position.y += 1
-	-- 		else if(self.target.y < self.position.y) do
-	-- 			self.position.y -= 1
-	-- 		end
-	-- 		yield()
-	-- 	end
-	-- end
+	local c = cocreate(function()
+	 	while not self:is_at_target() do
+			printh(time())
+			if self.target.x > self.position.x then
+				self.position.x += 1
+			elseif self.target.x < self.position.x then
+				self.position.x -= 1
+			end
+
+			if self.target.y > self.position.y then
+				self.position.y += 1
+			elseif self.target.y < self.position.y then
+				self.position.y -= 1
+			end
+			yield()
+		 end
+		 self.is_moving = false
+	end)
+
+	add(actions, c)
 end
 
 function player:draw()
 	spr(000, self.position.x, self.position.y)
+	printh("x")
+	printh(tostring(self.position.x))
+	printh("y")
+	printh(tostring(self.position.y))
 end
 
 
