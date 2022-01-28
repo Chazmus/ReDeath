@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="PICO-8.app">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/PICO-8.app.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
