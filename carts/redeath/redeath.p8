@@ -4,7 +4,7 @@ __lua__
 -- main
 -- The loop
 game_objects = {}
-actions = {}
+positions = {}
 
 function _update()
 	for go in all(game_objects) do
@@ -28,64 +28,35 @@ end
 -->8
 -- The player
 player = {
+    friction = {x=1.1,y=1.1},
 	position = {x=0,y=0}, -- In pixel space
+	velocity = {x=0,y=0},
 	target = {x=0,y=0}, -- In pixel space
 	is_moving = false,
 }
 
-
 add(game_objects, player)
 
 function player:update()
-	if self.is_moving == false then
-		if(btn(up)) then
-			self.target.y -= 8
-		end
-		if(btn(down)) then
-			self.target.y += 8
-		end
-		if(btn(left)) then
-			self.target.x -= 8
-		end
-		if(btn(right)) then
-			self.target.x += 8
-		end
+    if(btn(up)) then
+        self.velocity.y = -1
+    end
+    if(btn(down)) then
+        self.velocity.y = 1
+    end
+    if(btn(left)) then
+        self.velocity.x = -1
+    end
+    if(btn(right)) then
+        self.velocity.x = 1
+    end
+    self.position.x += self.velocity.x;
+    self.position.y += self.velocity.y;
 
-		if(not self:is_at_target()) then 
-			self.is_moving = true
-		end
-	end
+    add(positions, self.position);
 
-	if self.is_moving then
-		self:move_towards_target()
-	end
-end
-
-function player:is_at_target()
-	return self.position.x == self.target.x and self.position.y == self.target.y
-end
-
-function player:move_towards_target()
-	local c = cocreate(function()
-	 	while not self:is_at_target() do
-			printh(time())
-			if self.target.x > self.position.x then
-				self.position.x += 1
-			elseif self.target.x < self.position.x then
-				self.position.x -= 1
-			end
-
-			if self.target.y > self.position.y then
-				self.position.y += 1
-			elseif self.target.y < self.position.y then
-				self.position.y -= 1
-			end
-			yield()
-		 end
-		 self.is_moving = false
-	end)
-
-	add(actions, c)
+    self.velocity.x /= self.friction.x;
+    self.velocity.y /= self.friction.y;
 end
 
 function player:draw()
