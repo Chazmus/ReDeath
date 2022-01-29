@@ -35,13 +35,14 @@ end
 -->8
 -- The player
 player = {
-	position = {x=8,y=8}, -- In pixel space
-	target = {x=8,y=8}, -- In pixel space
+	position = {x=8,y=8}, 
+	target = {x=8,y=8},
 	is_moving = false,
 	command_queue = {},
 	current_command = 0,
 	sprite_sequence = {001, 017, 001, 033},
-	anim_speed = 4
+	anim_speed = 4,
+	last_move_time = 0
 }
 
 add(game_objects, player)
@@ -51,16 +52,19 @@ end
 
 function player:update()
 	if self.is_moving == false then
-
 		command = nil
-
 		if btn(fire1) then
-			-- printh(self.current_command)
+			if self.current_command < 1 then 
+				return 
+			end
 			self.command_queue[self.current_command - 1].unexecute()
 			self.current_command -= 1
 		end
-
 		if btn(fire2) then
+		end
+
+		if(self.last_move_time + 0.27 > time()) then
+			return
 		end
 
 		if(btn(up)) then
@@ -73,12 +77,11 @@ function player:update()
 			end
 
 			function command.unexecute()
-				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
+				if not (self.command_queue[self.current_command-1].success == nil) 
+				and self.command_queue[self.current_command-1].success then
 					self.target.y += 8
 				end
 			end
-
-			printh(#self.command_queue)
 		end
 
 		if(btn(down)) then
@@ -91,16 +94,11 @@ function player:update()
 			end
 
 			function command.unexecute()
-				printh(self.current_command)
-				printh(self.command_queue[self.current_command-1].success)
-				printh(not self.command_queue[self.current_command-1].success)
-
-				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
+				if not (self.command_queue[self.current_command-1].success == nil) 
+				and self.command_queue[self.current_command-1].success then
 					self.target.y -= 8
 				end
 			end
-
-			printh(#self.command_queue)
 		end
 
 		if(btn(left)) then
@@ -113,12 +111,11 @@ function player:update()
 			end
 
 			function command.unexecute()
-				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
+				if not (self.command_queue[self.current_command-1].success == nil) 
+				and self.command_queue[self.current_command-1].success then
 					self.target.x += 8
 				end
 			end
-
-			printh(#self.command_queue)
 		end
 
 		if(btn(right)) then
@@ -131,15 +128,14 @@ function player:update()
 			end
 
 			function command.unexecute()
-				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
+				if not (self.command_queue[self.current_command-1].success == nil) 
+				and self.command_queue[self.current_command-1].success then
 					self.target.x -= 8
 				end
 			end
-
-			printh(#self.command_queue)
 		end
-
 		if (command != nil) then
+			self.last_move_time = time()
 			self.command_queue[self.current_command] = command
 			self.command_queue[self.current_command].execute()
 			self.current_command += 1
@@ -202,11 +198,9 @@ end
 collisionlayers = {7}
 
 function check_for_collision(grid_position)
-	-- printh("checking collision")
 	local tile = mget(grid_position.x, grid_position.y);
 	for i in all(collisionlayers) do
 		if (fget(tile, i)) then
-			-- printh("collision detected")
 			return true;
 		end
 	end
