@@ -4,12 +4,17 @@ __lua__
 -- main
 -- The loop
 game_objects = {}
+animator = {}
+animations = {}
+animated_objects = {}
+add(game_objects, animator)
 actions = {}
 player_list = {
 	player1 = nil,
 	player2 = nil
 }
 function _init()
+	init_animations()
 	player_list.player1 = spawn_player({x=8, y=8})
 	foreach(game_objects, 
 	function(go) 
@@ -17,6 +22,8 @@ function _init()
 			go:init()
 		end
 	end)
+
+	load_level1()
 end
 
 function _update()
@@ -42,8 +49,11 @@ end
 
 function _draw()
 	cls(0)
+
 	for go in all(game_objects) do
-		go:draw()
+		if go.draw != nil then
+			go:draw()
+		end
 	end
 	map()
 end
@@ -294,15 +304,54 @@ function check_for_collision(grid_position)
 end
 
 -->8
--- animated map objects
+-- Level management
 
-animator = {}
-add(game_objects, animator)
+level_loader = {}
 
-animated_objects = {}
+function load_level1()
+	-- initialise animated map objects
+
+	local tree1 = {
+		init = function() 
+			add(animated_objects, {	position = {x = 4, y = 10}, -- celx, cely
+									anim = animations["tree"]})
+		end
+	}
+
+	-- TODO the init should add a pressure plate and a door somewhere
+	-- the update function can then check for the plate to collide with the player
+	-- and change the state of the door to open.
+	local pressure_plate_and_door = {
+		init = function() end,
+		update = function() end
+	}
+
+	local level1 = {
+		tree1,
+	}
+
+	level_loader:load_level_objects(level1)
+
+end
+
+function level_loader:load_level_objects(level_objects)
+	self:unload_level_objects()
+	self.current_level = level_objects
+	for go in all(level_objects) do
+		go.init()
+		add(game_objects, go)
+	end
+end
+
+function level_loader:unload_level_objects()
+	if self.current_level == nil then return end
+	for go in all(self.current_level) do
+		go.init()
+		remove(game_objects, go)
+	end
+end
 
 function init_animations()
-	animations = {}
 
 	-- define animated sprites
 	animations["tree"] = {
@@ -320,21 +369,6 @@ function init_animations()
 	return animations
 end
 
-function animator:init()
-	local animations = init_animations()
-
-	-- initialise animated map objects
-	add(animated_objects, {	position = {x = 4, y = 10}, -- celx, cely
-							anim = animations["tree"]})
-
-	add(animated_objects, {	position = {x = 10, y = 10},
-							anim = animations["tree"]})
-
-	add(animated_objects, { position = {x = 5, y = 5},
-							anim = animations["keycard"]})
-
-end
-
 function animator:update()
 	for obj in all(animated_objects) do
 		local sprite_this_frame = get_sprite_animated(obj.anim.sprite_sequence, obj.anim.speed)
@@ -344,10 +378,6 @@ function animator:update()
 			end
 		end
 	end
-end
-
-function animator:draw()
-	-- spr(get_sprite_animated(sprite.sequence, sprite.speed), sprite.position.x, sprite.position.y, sprite.size.x, sprite.size.y)
 end
 
 function get_sprite_animated(frames, speed)
@@ -366,12 +396,6 @@ function tick_command()
 		command_to_run.execute()
 		player1.current_command += 1
 	end
-end
-
--->8
---level loader
-level_loader = {}
-function level_loader:load_level(level)
 end
 
 __gfx__
