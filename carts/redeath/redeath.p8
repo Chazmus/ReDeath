@@ -65,7 +65,10 @@ function player:update()
 		end
 
 		if input_utils:get_button_down(fire2) then
-			self:undo_all_commands()
+			input_utils:handle_hold_button(fire2, 1, 
+				function() 
+					self:undo_all_commands()
+				end)
 		end
 
 		if(self.last_move_time + 0.133 > time()) then
@@ -161,19 +164,19 @@ function player:is_at_target()
 end
 
 function player:undo_all_commands()
-				printh("undo all")
-	local c cocreate(function()
-				printh("running")
+	local c = cocreate(function()
+		self.last_move_time = time()
 		while self.current_command > 0 do
-			self.last_move_time = time()
-			while(self.last_move_time < time()+0.133) do
-				printh("stuff")
+			if(self.last_move_time < time() - 0.27) then
+				self.command_queue[self.current_command - 1].unexecute()
+				self.current_command -= 1
+				self.last_move_time = time()
+			else
 				yield()
 			end
-			self.command_queue[self.current_command - 1].unexecute()
-			self.current_command -= 1
 		end
 	end)
+
 	add(actions, c)
 end
 
@@ -234,6 +237,26 @@ end
 function input_utils:get_button_up(button)
 	-- Returns true only in the frame that the button was released
 	return self[button] == true and not btn(button)
+end
+
+function input_utils:handle_hold_button(button, hold_time, success_function, update_function)
+	-- Return true if the given button has been held down for the given amount of time
+	local c = cocreate(
+		function()
+			start_time = time()
+			while btn(button) and time() < (start_time + hold_time) do
+				if update_function != nil then
+					update_function()
+				end
+				yield()
+			end
+			if not btn(button) then
+				return
+			end
+			success_function()
+		end
+	)
+	add(actions, c)
 end
 
 -- grid functions
