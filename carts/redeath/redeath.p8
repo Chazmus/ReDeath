@@ -31,23 +31,48 @@ player = {
 	position = {x=8,y=8}, -- In pixel space
 	target = {x=8,y=8}, -- In pixel space
 	is_moving = false,
+	command_queue = {},
+	current_command = 0,
 }
 
 add(game_objects, player)
 
 function player:update()
 	if self.is_moving == false then
+		local command = nil
+		if btn(fire1) then
+			self.command_queue[self.current_command - 1].unexecute()
+			self.current_command -= 1
+		end
+
 		if(btn(up)) then
-			self.target.y -= 8
+			command = command_builder:instance(self, 
+			function() self.target.y -= 8 end, 
+			function() self.target.y += 8 end)
 		end
+
 		if(btn(down)) then
-			self.target.y += 8
+			command = command_builder:instance(self, 
+			function() self.target.y += 8 end, 
+			function() self.target.y -= 8 end)
 		end
+
 		if(btn(left)) then
-			self.target.x -= 8
+			command = command_builder:instance(self, 
+			function() self.target.x -= 8 end, 
+			function() self.target.x += 8 end)
 		end
+
 		if(btn(right)) then
-			self.target.x += 8
+			command = command_builder:instance(self, 
+			function() self.target.x += 8 end, 
+			function() self.target.x -= 8 end)
+		end
+
+		if command != nil then
+			self.command_queue[self.current_command] = command
+			self.command_queue[self.current_command].execute()
+			self.current_command += 1
 		end
 
 		if(not self:is_at_target()) then
@@ -110,7 +135,6 @@ function pixel_to_grid(grid_position)
 	return {x=(grid_position.x / 8), y=(grid_position.y / 8)}
 end
 
---
 collisionlayers = {7}
 
 function check_for_collision(grid_position)
@@ -124,6 +148,19 @@ function check_for_collision(grid_position)
 	end
 	return false;
 end
+
+-->8
+--command queue
+command_builder = {}
+
+function command_builder:instance(player, execute, unexecute)
+	command = {}
+	command["player"] = player
+	command["execute"] = execute
+	command["unexecute"] = unexecute
+	return command
+end
+
 
 __gfx__
 0008888000aaaa0044444444444444444444444444444444444444446211112600dddd0000555500444444448008800805050505eeeeeeee9999999900000000
