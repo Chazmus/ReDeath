@@ -5,8 +5,12 @@ __lua__
 -- The loop
 game_objects = {}
 actions = {}
+player_list = {
+	player1 = nil,
+	player2 = nil
+}
 function _init()
-	spawn_player({x=8, y=8})
+	player_list.player1 = spawn_player({x=8, y=8})
 	foreach(game_objects, 
 	function(go) 
 		if go.init != nil then
@@ -47,8 +51,8 @@ end
 -- the player
 player_base = {}
 function spawn_player(starting_position)
-	starting_target = {x=starting_position.x, y=starting_position.y}
-	player = player_base:new{
+	local starting_target = {x=starting_position.x, y=starting_position.y}
+	local player = player_base:new{
 		position = starting_position,
 		target = starting_target,
 		is_moving = false,
@@ -60,6 +64,7 @@ function spawn_player(starting_position)
 		is_alive = true
 	}
 	add(game_objects, player)
+	return player
 end
 
 function player_base:new (o)
@@ -79,95 +84,99 @@ end
 
 function player_base:update()
 	if self.is_moving == false then
-		command = nil
-		if input_utils:get_button_down(fire1) then
-			if self.current_command < 1 then 
-				return 
+		-- handle input
+		local command = nil
+		if self.is_alive then
+			if input_utils:get_button_down(fire1) then
+				if self.current_command < 1 then 
+					return 
+				end
+				self.command_queue[self.current_command - 1].unexecute()
+				self.current_command -= 1
 			end
-			self.command_queue[self.current_command - 1].unexecute()
-			self.current_command -= 1
-		end
 
-		if input_utils:get_button_down(fire2) then
-			input_utils:handle_hold_button(fire2, 0.5, 
-				function() 
-					self.is_alive = false
-					self:undo_all_commands(
-						function()
-							player2 = spawn_player({x=16, y=8})
-							add(game_objects, player2)
-						end)
-				end)
-		end
+			if input_utils:get_button_down(fire2) then
+				input_utils:handle_hold_button(fire2, 0.5, 
+					function() 
+						self.is_alive = false
+						self:undo_all_commands(
+							function()
+								local player2 = spawn_player({x=16, y=8})
+								add(game_objects, player2)
+								player_list.player2 = player2
+							end)
+					end)
+			end
 
-		if(self.last_move_time + 0.133 > time()) then
-			return
-		end
+			if(self.last_move_time + 0.133 > time()) then
+				return
+			end
 
-		if input_utils:get_button_down(up) then
-			command = {}
-			function command.execute() 	
-				if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y - 8})) then
-					self.target.y -= 8
-					command.success = true
+			if input_utils:get_button_down(up) then
+				command = {}
+				function command.execute() 	
+					if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y - 8})) then
+						self.target.y -= 8
+						command.success = true
+					end
+				end
+
+				function command.unexecute()
+					if not (self.command_queue[self.current_command-1].success == nil) 
+					and self.command_queue[self.current_command-1].success then
+						self.target.y += 8
+					end
 				end
 			end
 
-			function command.unexecute()
-				if not (self.command_queue[self.current_command-1].success == nil) 
-				and self.command_queue[self.current_command-1].success then
-					self.target.y += 8
+			if input_utils:get_button_down(down) then
+				command = {}
+				function command.execute() 	
+					if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y + 8})) then
+						self.target.y += 8
+						command.success = true
+					end
 				end
-			end
-		end
 
-		if input_utils:get_button_down(down) then
-			command = {}
-			function command.execute() 	
-				if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y + 8})) then
-					self.target.y += 8
-					command.success = true
-				end
-			end
-
-			function command.unexecute()
-				if not (self.command_queue[self.current_command-1].success == nil) 
-				and self.command_queue[self.current_command-1].success then
-					self.target.y -= 8
-				end
-			end
-		end
-
-		if input_utils:get_button_down(left) then
-			command = {}
-			function command.execute() 	
-				if not check_for_collision(pixel_to_grid({x = self.target.x - 8, y = self.target.y})) then
-					self.target.x -= 8
-					command.success = true
+				function command.unexecute()
+					if not (self.command_queue[self.current_command-1].success == nil) 
+					and self.command_queue[self.current_command-1].success then
+						self.target.y -= 8
+					end
 				end
 			end
 
-			function command.unexecute()
-				if not (self.command_queue[self.current_command-1].success == nil) 
-				and self.command_queue[self.current_command-1].success then
-					self.target.x += 8
+			if input_utils:get_button_down(left) then
+				command = {}
+				function command.execute() 	
+					if not check_for_collision(pixel_to_grid({x = self.target.x - 8, y = self.target.y})) then
+						self.target.x -= 8
+						command.success = true
+					end
+				end
+
+				function command.unexecute()
+					if not (self.command_queue[self.current_command-1].success == nil) 
+					and self.command_queue[self.current_command-1].success then
+						self.target.x += 8
+					end
 				end
 			end
-		end
 
-		if input_utils:get_button_down(right) then
-			command = {}
-			function command.execute() 	
-				if not check_for_collision(pixel_to_grid({x = self.target.x + 8, y = self.target.y})) then
-					self.target.x += 8
-					command.success = true
+			if input_utils:get_button_down(right) then
+				command = {}
+				function command.execute() 	
+					if not check_for_collision(pixel_to_grid({x = self.target.x + 8, y = self.target.y})) then
+						self.target.x += 8
+						command.success = true
+					end
 				end
-			end
 
-			function command.unexecute()
-				if not (self.command_queue[self.current_command-1].success == nil) 
-				and self.command_queue[self.current_command-1].success then
-					self.target.x -= 8
+				function command.unexecute()
+					if not (self.command_queue[self.current_command-1].success == nil) 
+					and self.command_queue[self.current_command-1].success then
+						self.target.x -= 8
+					end
 				end
 			end
 		end
@@ -177,6 +186,7 @@ function player_base:update()
 			self.command_queue[self.current_command] = command
 			self.command_queue[self.current_command].execute()
 			self.current_command += 1
+			tick_command()
 		end
 
 		if(not self:is_at_target()) then
@@ -238,7 +248,6 @@ end
 function player_base:draw()
 	spr(get_sprite_animated(self:get_sprite_sequence(), self.anim_speed), self.position.x, self.position.y)
 end
-
 -->8
 -- utils
 left,right,up,down,fire1,fire2=0,1,2,3,4,5
@@ -372,6 +381,19 @@ end
 
 function get_sprite_animated(frames, speed)
  	return frames[flr(time()*speed % #frames) + 1]
+end
+
+-->8
+-- command ticker
+function tick_command() 
+	local player1 = player_list.player1
+	if player1 != nil and not player1.is_alive then
+		-- if current command + 1 is still a thing
+		local command_to_run = player1.command_queue[player1.current_command]
+		if command_to_run == nil then return end
+		command_to_run.execute()
+		player1.current_command += 1
+	end
 end
 
 __gfx__
