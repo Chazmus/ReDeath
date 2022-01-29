@@ -22,7 +22,10 @@ function _update()
 		else
 		  del(actions,c)
 		end
-	  end
+	end
+
+	-- Input utils update MUST be done last
+	input_utils:update()
 end
 
 function _draw()
@@ -53,7 +56,7 @@ end
 function player:update()
 	if self.is_moving == false then
 		command = nil
-		if btn(fire1) then
+		if input_utils:get_button_down(fire1) then
 			if self.current_command < 1 then 
 				return 
 			end
@@ -61,19 +64,15 @@ function player:update()
 			self.current_command -= 1
 		end
 
-		if btn(fire2) then
-			-- undo all
-			while self.current_command > 0 do
-				self.command_queue[self.current_command - 1].unexecute()
-				self.current_command -= 1
-			end
+		if input_utils:get_button_down(fire2) then
+			self:undo_all_commands()
 		end
 
 		if(self.last_move_time + 0.133 > time()) then
 			return
 		end
 
-		if(btn(up)) then
+		if input_utils:get_button_down(up) then
 			command = {}
 			function command.execute() 	
 				if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y - 8})) then
@@ -90,7 +89,7 @@ function player:update()
 			end
 		end
 
-		if(btn(down)) then
+		if input_utils:get_button_down(down) then
 			command = {}
 			function command.execute() 	
 				if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y + 8})) then
@@ -107,7 +106,7 @@ function player:update()
 			end
 		end
 
-		if(btn(left)) then
+		if input_utils:get_button_down(left) then
 			command = {}
 			function command.execute() 	
 				if not check_for_collision(pixel_to_grid({x = self.target.x - 8, y = self.target.y})) then
@@ -124,7 +123,7 @@ function player:update()
 			end
 		end
 
-		if(btn(right)) then
+		if input_utils:get_button_down(right) then
 			command = {}
 			function command.execute() 	
 				if not check_for_collision(pixel_to_grid({x = self.target.x + 8, y = self.target.y})) then
@@ -161,6 +160,23 @@ function player:is_at_target()
 	return self.position.x == self.target.x and self.position.y == self.target.y
 end
 
+function player:undo_all_commands()
+				printh("undo all")
+	local c cocreate(function()
+				printh("running")
+		while self.current_command > 0 do
+			self.last_move_time = time()
+			while(self.last_move_time < time()+0.133) do
+				printh("stuff")
+				yield()
+			end
+			self.command_queue[self.current_command - 1].unexecute()
+			self.current_command -= 1
+		end
+	end)
+	add(actions, c)
+end
+
 function player:move_towards_target()
 	local c = cocreate(function()
 	 	while not self:is_at_target() do
@@ -191,6 +207,34 @@ end
 -- utils
 left,right,up,down,fire1,fire2=0,1,2,3,4,5
 black,dark_blue,dark_purple,dark_green,brown,dark_gray,light_gray,white,red,orange,yellow,green,blue,indigo,pink,peach=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+
+input_utils = {
+	left = false,
+	right = false,
+	up = false,
+	down = false,
+	fire1 = false,
+	fire2 = false
+}
+
+function input_utils:update()
+	self[left] = btn(left)
+	self[right] = btn(right)
+	self[up] = btn(up)
+	self[down] = btn(down)
+	self[fire1] = btn(fire1)
+	self[fire2] = btn(fire2)
+end
+
+function input_utils:get_button_down(button)
+	-- Returns true only in the frame that the button was pushed down
+	return self[button] == false and btn(button)
+end
+
+function input_utils:get_button_up(button)
+	-- Returns true only in the frame that the button was released
+	return self[button] == true and not btn(button)
+end
 
 -- grid functions
 function grid_to_pixel(grid_position)
