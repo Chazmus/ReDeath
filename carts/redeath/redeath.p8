@@ -55,6 +55,7 @@ function player:update()
 		command = nil
 
 		if btn(fire1) then
+			-- printh(self.current_command)
 			self.command_queue[self.current_command - 1].unexecute()
 			self.current_command -= 1
 		end
@@ -65,14 +66,14 @@ function player:update()
 		if(btn(up)) then
 			command = {}
 			function command.execute() 	
-				self.target.y -= 8
-				if not check_for_collision(pixel_to_grid(self.target)) then
+				if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y - 8})) then
+					self.target.y -= 8
 					command.success = true
 				end
 			end
 
 			function command.unexecute()
-				if not command.success == nil and command.success then
+				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
 					self.target.y += 8
 				end
 			end
@@ -83,14 +84,18 @@ function player:update()
 		if(btn(down)) then
 			command = {}
 			function command.execute() 	
-				self.target.y += 8
-				if not check_for_collision(pixel_to_grid(self.target)) then
+				if not check_for_collision(pixel_to_grid({x = self.target.x, y = self.target.y + 8})) then
+					self.target.y += 8
 					command.success = true
 				end
 			end
 
 			function command.unexecute()
-				if not command.success == nil and command.success then
+				printh(self.current_command)
+				printh(self.command_queue[self.current_command-1].success)
+				printh(not self.command_queue[self.current_command-1].success)
+
+				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
 					self.target.y -= 8
 				end
 			end
@@ -101,14 +106,14 @@ function player:update()
 		if(btn(left)) then
 			command = {}
 			function command.execute() 	
-				self.target.x -= 8
-				if not check_for_collision(pixel_to_grid(self.target)) then
+				if not check_for_collision(pixel_to_grid({x = self.target.x - 8, y = self.target.y})) then
+					self.target.x -= 8
 					command.success = true
 				end
 			end
 
 			function command.unexecute()
-				if not command.success == nil and command.success then
+				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
 					self.target.x += 8
 				end
 			end
@@ -119,14 +124,14 @@ function player:update()
 		if(btn(right)) then
 			command = {}
 			function command.execute() 	
-				self.target.x += 8
-				if not check_for_collision(pixel_to_grid(self.target)) then
+				if not check_for_collision(pixel_to_grid({x = self.target.x + 8, y = self.target.y})) then
+					self.target.x += 8
 					command.success = true
 				end
 			end
 
 			function command.unexecute()
-				if not command.success == nil and command.success then
+				if not (self.command_queue[self.current_command-1].success == nil) and self.command_queue[self.current_command-1].success then
 					self.target.x -= 8
 				end
 			end
