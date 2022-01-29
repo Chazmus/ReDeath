@@ -5,24 +5,32 @@ __lua__
 -- The loop
 game_objects = {}
 actions = {}
-
 function _init()
-	for go in all(game_objects) do
-		go:init()
-	end
+	spawn_player({x=8, y=8})
+	foreach(game_objects, 
+	function(go) 
+		if go.init != nil then
+			go:init()
+		end
+	end)
 end
 
 function _update()
-	for go in all(game_objects) do
-		go:update()
-	end
-	for c in all(actions) do
+	foreach(game_objects, 
+	function(go) 
+		if go.update != nil then
+			go:update()
+		end
+	end)
+
+	foreach(actions, 
+	function(c) 
 		if costatus(c) then
 		  coresume(c)
 		else
 		  del(actions,c)
 		end
-	end
+	end)
 
 	-- Input utils update MUST be done last
 	input_utils:update()
@@ -36,25 +44,40 @@ function _draw()
 	map()
 end
 -->8
--- The player
-player = {
-	position = {x=8,y=8},
-	room_position = {x = 0, y = 0},
-	target = {x=8,y=8},
-	is_moving = false,
-	command_queue = {},
-	current_command = 0,
-	sprite_sequence = {051, 052, 051, 053},
-	anim_speed = 8,
-	last_move_time = 0
-}
-
-add(game_objects, player)
-
-function player:init()
+-- the player
+player_base = {}
+function spawn_player(starting_position)
+	starting_target = {x=starting_position.x, y=starting_position.y}
+	player = player_base:new{
+		position = starting_position,
+		target = starting_target,
+		is_moving = false,
+		command_queue = {},
+		current_command = 0,
+		sprite_sequence = {051, 052, 051, 053},
+		anim_speed = 8,
+		last_move_time = 0,
+		is_alive = true
+	}
+	add(game_objects, player)
 end
 
-function player:update()
+function player_base:new (o)
+	-- Instantiate a new player
+    o = o or {}
+    setmetatable(o, self) -- This is basically how you do classes in lua, brilliant :)
+    self.__index = self
+    return o
+end
+
+function player_base:get_sprite_sequence()
+	if self.is_alive then
+		return {48,49,50}
+	end
+	return {51,52,53}
+end
+
+function player_base:update()
 	if self.is_moving == false then
 		command = nil
 		if input_utils:get_button_down(fire1) then
@@ -66,9 +89,14 @@ function player:update()
 		end
 
 		if input_utils:get_button_down(fire2) then
-			input_utils:handle_hold_button(fire2, 1, 
+			input_utils:handle_hold_button(fire2, 0.5, 
 				function() 
-					self:undo_all_commands()
+					self.is_alive = false
+					self:undo_all_commands(
+						function()
+							player2 = spawn_player({x=16, y=8})
+							add(game_objects, player2)
+						end)
 				end)
 		end
 
@@ -161,11 +189,11 @@ function player:update()
 	end
 end
 
-function player:is_at_target()
+function player_base:is_at_target()
 	return self.position.x == self.target.x and self.position.y == self.target.y
 end
 
-function player:undo_all_commands()
+function player_base:undo_all_commands(callback)
 	local c = cocreate(function()
 		self.last_move_time = time()
 		while self.current_command > 0 do
@@ -177,12 +205,15 @@ function player:undo_all_commands()
 				yield()
 			end
 		end
+		if callback != nil then
+			callback()
+		end
 	end)
 
 	add(actions, c)
 end
 
-function player:move_towards_target()
+function player_base:move_towards_target()
 	local c = cocreate(function()
 	 	while not self:is_at_target() do
 			if self.target.x > self.position.x then
@@ -204,8 +235,8 @@ function player:move_towards_target()
 	add(actions, c)
 end
 
-function player:draw()
-	spr(get_sprite_animated(self.sprite_sequence, self.anim_speed), self.position.x, self.position.y)
+function player_base:draw()
+	spr(get_sprite_animated(self:get_sprite_sequence(), self.anim_speed), self.position.x, self.position.y)
 end
 
 -->8
