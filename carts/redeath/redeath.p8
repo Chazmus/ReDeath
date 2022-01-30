@@ -396,7 +396,9 @@ function door:new (o)
 end
 
 function door:init()
-	mset(self.position.x, self.position.y, self.sprite[1])
+	if self != nil then
+		mset(self.position.x, self.position.y, self.sprite[1])
+	end
 end
 
 function door:update()
@@ -426,23 +428,30 @@ function pressure_plate:new (o)
 end
 
 function pressure_plate:init()
-	mset(self.position.x, self.position.y, self.sprite[1])
+	if self != nil then
+		mset(self.position.x, self.position.y, self.sprite[1])
+	end
 end
 
 function pressure_plate:update()
+	if player_list.player1 == nil or player_list.player2 == nil then
+		return
+	end
+
 	local p1 = player_list.player1.position
 	local p2 = player_list.player2.position
 
-	local state = ((p1.x == self.position.x & p1.y == self.position.y) | (p2.x == self.position.x and p2.y == self.position.y))-- p1 or p2 is at this location
-	if (self.is_on ^^ state) then -- xor
-		self.is_on = state
+    -- Throwing an exception
+	-- local state = ((p1.x == self.position.x & p1.y == self.position.y) | (p2.x == self.position.x and p2.y == self.position.y))-- p1 or p2 is at this location
+	-- if (self.is_on ^^ state) then -- xor
+	--	self.is_on = state
 
-		for door in self.connected_doors do
-			door = state
-		end
+	--	for door in self.connected_doors do
+	--		door = state
+	--	end
 
-		mset(self.position.x, self.position.y, self.is_on and self.sprite[1] or self.sprite[2])
-	end
+	--	mset(self.position.x, self.position.y, self.is_on and self.sprite[1] or self.sprite[2])
+	-- end
 end
 
 
