@@ -384,10 +384,10 @@ end
 
 -- door
 door = {}
-function create_door(pos, starting_state)
+function create_door(pos)
 	local new_door = door:new{
 		position = pos,
-		is_open = starting_state,
+		is_open = false,
 		sprite = {133,134}
 	}
 	return new_door
@@ -402,7 +402,7 @@ end
 
 function door:init()
 	if self != nil then
-		mset(self.position.x, self.is_open and self.sprite[2] or self.sprite[1])
+		mset(self.position.x, self.position.y, self.sprite[1])
 	end
 end
 
@@ -457,7 +457,7 @@ function pressure_plate:update()
 		self.is_on = state
 
 		for connected_door in all(self.connected_doors) do
-			connected_door.is_open = not connected_door.is_open
+			connected_door.is_open = state
 		end
 
 		mset(self.position.x, self.position.y, self.is_on and self.sprite[2] or self.sprite[1])
@@ -555,11 +555,11 @@ function toggle_switch:update()
 	end
 
 	if state and not self.is_player_here then 
-		--self.is_active = not self.is_active
+		self.is_active = not self.is_active
 		self.is_player_here = true
 
 		for connected_door in all(self.connected_doors) do
-			connected_door.is_open = not connected_door.is_open
+			connected_door.is_open = self.is_active
 		end
 
 		mset(self.position.x, self.position.y, self.is_active and self.sprite[2] or self.sprite[1])
@@ -586,10 +586,10 @@ function load_level1()
 	-- create interactable objects
 
 	-- needs to be updated for new map
-	local door1 = create_door({x = 1, y = 5}, false)
-	local door2 = create_door({x = 2, y = 5}, true)
-	local door3 = create_door({x = 3, y = 5}, false)
-	local door4 = create_door({x = 5, y = 4}, false)
+	local door1 = create_door({x = 1, y = 5})
+	local door2 = create_door({x = 2, y = 5})
+	local door3 = create_door({x = 3, y = 5})
+	local door4 = create_door({x = 5, y = 4})
 
 	local pressure_plate1 = create_pressure_plate({x = 4, y = 1}, { door1, door2, door3, door4 })
 
@@ -709,7 +709,7 @@ e777676ee777676ee777777ee000707ee000707ee000000e00000000000000000000000000000000
 e777777ee777777ee777676ee000000ee000000ee000707e00000000000000000000000000000000706655555555555555556607000000000000000000000000
 e777777ee777777ee777777ee000000ee000000ee000000e00000000000000000000000000000000706666666666666666666607000000000000000000000000
 e777777ee777777ee777777ee000000ee000000ee000000e00000000000000000000000000000000700666666666666666666007000000000000000000000000
-e7eeee7ee7eeee7eee7ee7eee0eeee0ee0eeee0ee0eeee0e00000000000000000000000000000000700000000000000000000007000000000000000000000000
+e7eeee7ee7eeee7eee7ee7eeee0ee0eee0eeee0eee0ee0ee00000000000000000000000000000000700000000000000000000007000000000000000000000000
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000777777777777777777777777000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000003bbbbb00000000003bbbbb00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
