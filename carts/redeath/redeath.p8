@@ -19,6 +19,7 @@ function _init()
 	-- music
 	music(0)
 
+	palt(0, false) -- disable the colour 0 (black) being transparent
 
 	init_animations()
 	player_list.player1 = spawn_player({x=8, y=8})
@@ -57,12 +58,12 @@ end
 function _draw()
 	cls(0)
 
+	map()
 	for go in all(game_objects) do
 		if go.draw != nil then
 			go:draw()
 		end
 	end
-	map()
 end
 
 -->8
@@ -530,19 +531,25 @@ function load_level1()
 	-- create interactable objects
 
 	-- needs to be updated for new map
-	local door1 = create_door({x = 4, y = 1})
-	local pressure_plate1 = create_pressure_plate({x = 6, y = 4}, { door1 })
+	local door1 = create_door({x = 1, y = 5})
+	local door2 = create_door({x = 2, y = 5})
+	local door3 = create_door({x = 3, y = 5})
+	local door4 = create_door({x = 5, y = 4})
+
+	local pressure_plate1 = create_pressure_plate({x = 4, y = 1}, { door1, door2, door3, door4 })
 	
-	local door2 = create_door({x = 7, y = 3})
-	local key1 = create_pickup_key({x = 6, y = 1}, { door2 })
+	--local door2 = create_door({x = 7, y = 3})
+	--local key1 = create_pickup_key({x = 6, y = 1}, { door2 })
 
 	-- add objects to level
 	local level1 = {
 		--tree1,
 		door1,
 		door2,
+		door3,
+		door4,
 		pressure_plate1,
-		key1,
+		--key1,
 	}
 
 	level_loader:load_level_objects(level1)
@@ -749,3 +756,4 @@ __sfx__
 __music__
 01 01020705
 02 03040806
+
