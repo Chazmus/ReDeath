@@ -9,13 +9,17 @@ animations = {}
 animated_objects = {}
 add(game_objects, animator)
 actions = {}
+
 player_list = {
 	player1 = nil,
 	player2 = nil
 }
+
 function _init()
+
 	init_animations()
 	player_list.player1 = spawn_player({x=8, y=8})
+
 	foreach(game_objects, 
 	function(go) 
 		if go.init != nil then
@@ -57,6 +61,50 @@ function _draw()
 	end
 	map()
 end
+
+-->8
+-- game state
+
+-- Trying out a way to keep track of which room we're in, loading vars according to room, limited number of moves, and resetting the room on fail
+
+-- game_state = {
+-- 	room_number = 1,
+-- 	room_vars = {}
+-- }
+
+-- function start_room(room_vars)
+-- 	game_state.room_vars = room_vars
+-- 	player_list.player1 = spawn_player({ x = room_vars.starting_position.x, y = room_vars.starting_position.y })
+-- end
+
+-- function restart_room()
+-- 	cleanup_room_and_objects()
+-- 	start_room(room_vars_list[game_state.room_number])
+-- end
+
+-- function next_room()
+-- 	cleanup_room_and_objects()
+-- 	start_room(room_vars_list[game_state.room_number + 1])
+-- 	game_state.room_number += 1
+-- end
+
+-- function cleanup_room_and_objects()
+-- 	del(game_objects, player_list.player1)
+-- 	del(game_objects, player_list.player2)
+-- 	-- destroy old player objects
+-- 	-- anything else to do before starting next room
+-- end
+
+
+-->8
+-- room vars
+
+-- room_vars_list = {
+-- 	{ starting_position = {x = 8, y = 8}, total_steps = 20 }, -- room 1
+-- 	{ starting_position = {x = 24, y = 24}, total_steps = 35} -- room 2, etc
+
+-- }
+
 -->8
 -- the player
 player_base = {}
@@ -71,7 +119,8 @@ function spawn_player(starting_position)
 		sprite_sequence = {051, 052, 051, 053},
 		anim_speed = 8,
 		last_move_time = 0,
-		is_alive = true
+		is_alive = true,
+		-- remaining_steps = game_state.room_vars.total_steps
 	}
 	add(game_objects, player)
 	return player
@@ -133,10 +182,30 @@ function player_base:update()
 		end
 		
 		if (command != nil) then
+			-- part of the game_state tab things
+
+			-- printh(self.remaining_steps)
+			-- if (self.remaining_steps <= 0) then
+			-- 	if (self == player_list.player1) then
+			-- 		self.is_alive = false
+			-- 		self:undo_all_commands(
+			-- 				function()
+			-- 					local player2 = spawn_player({x=16, y=8})
+			-- 					add(game_objects, player2)
+			-- 					player_list.player2 = player2
+			-- 				end)
+			-- 	elseif (self == player_list.player2) then
+			-- 		restart_room()
+			-- 	else
+			-- 		return
+			-- 	end
+			-- end
+
 			self.last_move_time = time()
 			self.command_queue[self.current_command] = command
 			self.command_queue[self.current_command].execute()
 			self.current_command += 1
+			-- self.remaining_steps -= 1
 			tick_command()
 		end
 
@@ -304,6 +373,80 @@ function check_for_collision(grid_position)
 end
 
 -->8
+-- Interactables
+
+-- door
+door = {}
+function create_door(pos)
+	local new_door = door:new{
+		position = pos,
+		is_open = false,
+		sprite = {133,134},
+		--init = function() self:init() end,
+		--update = function() self:update() end
+	}
+	return new_door
+end
+
+function door:new (o)
+	o = o or {}
+	setmetatable(o, self)
+	self.__index = self
+	return o
+end
+
+function door:init()
+	mset(self.position.x, self.position.y, self.sprite[1])
+end
+
+function door:update()
+	mset(self.position.x, self.position.y, self.is_open and self.sprite[1] or self.sprite[2])
+end
+
+-- pressure plate
+pressure_plate = {}
+function create_pressure_plate(pos, doors)
+	local new_pressure_plate = pressure_plate:new{
+		is_on = false,
+		changed = true,
+		position = pos,
+		sprite = {184,185},
+		connected_doors = doors,
+		--init = function() self:init() end,
+		--update = function() self:update() end
+	}
+	return new_pressure_plate
+end
+
+function pressure_plate:new (o)
+	o = o or {}
+	setmetatable(o, self) 
+	self.__index = self
+	return o
+end
+
+function pressure_plate:init()
+	mset(self.position.x, self.position.y, self.sprite[1])
+end
+
+function pressure_plate:update()
+	local p1 = player_list.player1.position
+	local p2 = player_list.player2.position
+
+	local state = ((p1.x == self.position.x & p1.y == self.position.y) | (p2.x == self.position.x and p2.y == self.position.y))-- p1 or p2 is at this location
+	if (self.is_on ^^ state) then -- xor
+		self.is_on = state
+
+		for door in self.connected_doors do
+			door = state
+		end
+
+		mset(self.position.x, self.position.y, self.is_on and self.sprite[1] or self.sprite[2])
+	end
+end
+
+
+-->8
 -- Level management
 
 level_loader = {}
@@ -321,13 +464,17 @@ function load_level1()
 	-- TODO the init should add a pressure plate and a door somewhere
 	-- the update function can then check for the plate to collide with the player
 	-- and change the state of the door to open.
-	local pressure_plate_and_door = {
-		init = function() end,
-		update = function() end
-	}
+	
+	-- trying to let door and pressure plate be their own "class" to make state updates/references cleaner
+	-- there's an issue with the scope of self when init/updating though. go.init() wont pass self to init(), but changing to go:init() seems to break player
+
+	local door1 = create_door({x = 16, y = 11})
+	local pressure_plate1 = create_pressure_plate({x = 5, y = 5}, { door1 })
 
 	local level1 = {
 		tree1,
+		door1,
+		pressure_plate1,
 	}
 
 	level_loader:load_level_objects(level1)
