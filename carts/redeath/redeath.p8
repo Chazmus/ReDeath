@@ -384,10 +384,10 @@ end
 
 -- door
 door = {}
-function create_door(pos)
+function create_door(pos, starting_state)
 	local new_door = door:new{
 		position = pos,
-		is_open = false,
+		is_open = starting_state,
 		sprite = {133,134}
 	}
 	return new_door
@@ -402,7 +402,7 @@ end
 
 function door:init()
 	if self != nil then
-		mset(self.position.x, self.position.y, self.sprite[1])
+		mset(self.position.x, self.is_open and self.sprite[2] or self.sprite[1])
 	end
 end
 
@@ -457,7 +457,7 @@ function pressure_plate:update()
 		self.is_on = state
 
 		for connected_door in all(self.connected_doors) do
-			connected_door.is_open = state
+			connected_door.is_open = not connected_door.is_open
 		end
 
 		mset(self.position.x, self.position.y, self.is_on and self.sprite[2] or self.sprite[1])
@@ -555,11 +555,11 @@ function toggle_switch:update()
 	end
 
 	if state and not self.is_player_here then 
-		self.is_active = not self.is_active
+		--self.is_active = not self.is_active
 		self.is_player_here = true
 
 		for connected_door in all(self.connected_doors) do
-			connected_door.is_open = self.is_active
+			connected_door.is_open = not connected_door.is_open
 		end
 
 		mset(self.position.x, self.position.y, self.is_active and self.sprite[2] or self.sprite[1])
@@ -586,10 +586,10 @@ function load_level1()
 	-- create interactable objects
 
 	-- needs to be updated for new map
-	local door1 = create_door({x = 1, y = 5})
-	local door2 = create_door({x = 2, y = 5})
-	local door3 = create_door({x = 3, y = 5})
-	local door4 = create_door({x = 5, y = 4})
+	local door1 = create_door({x = 1, y = 5}, false)
+	local door2 = create_door({x = 2, y = 5}, true)
+	local door3 = create_door({x = 3, y = 5}, false)
+	local door4 = create_door({x = 5, y = 4}, false)
 
 	local pressure_plate1 = create_pressure_plate({x = 4, y = 1}, { door1, door2, door3, door4 })
 
