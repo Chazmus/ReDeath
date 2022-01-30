@@ -381,9 +381,7 @@ function create_door(pos)
 	local new_door = door:new{
 		position = pos,
 		is_open = false,
-		sprite = {133,134},
-		--init = function() self:init() end,
-		--update = function() self:update() end
+		sprite = {133,134}
 	}
 	return new_door
 end
@@ -402,7 +400,7 @@ function door:init()
 end
 
 function door:update()
-	mset(self.position.x, self.position.y, self.is_open and self.sprite[1] or self.sprite[2])
+	mset(self.position.x, self.position.y, self.is_open and self.sprite[2] or self.sprite[1]) -- works as a ternary operator, self.is_open ? self.sprite[1] : self.sprite[2], (order flipped)
 end
 
 -- pressure plate
@@ -413,9 +411,7 @@ function create_pressure_plate(pos, doors)
 		changed = true,
 		position = pos,
 		sprite = {184,185},
-		connected_doors = doors,
-		--init = function() self:init() end,
-		--update = function() self:update() end
+		connected_doors = doors
 	}
 	return new_pressure_plate
 end
@@ -434,25 +430,36 @@ function pressure_plate:init()
 end
 
 function pressure_plate:update()
-	if player_list.player1 == nil or player_list.player2 == nil then
-		return
+	local state = false
+
+	-- check for player1 at this position
+	if (not (player_list.player1 == nil)) then
+		local p1 = pixel_to_grid(player_list.player1.position)
+		state = p1.x == self.position.x and p1.y == self.position.y
 	end
 
-	local p1 = player_list.player1.position
-	local p2 = player_list.player2.position
+	-- check for player2
+	if (not state and not (player_list.player2 == nil)) then
+		local p2 = pixel_to_grid(player_list.player2.position)
+		state = state or (p2.x == self.position.x and p2.y == self.position.y)
+	end
 
-    -- Throwing an exception
-	-- local state = ((p1.x == self.position.x & p1.y == self.position.y) | (p2.x == self.position.x and p2.y == self.position.y))-- p1 or p2 is at this location
-	-- if (self.is_on ^^ state) then -- xor
-	--	self.is_on = state
+	self.changed = (self.is_on and not state) or (state and not self.is_on)
 
-	--	for door in self.connected_doors do
-	--		door = state
-	--	end
+	-- only update if the state has changed
+	if (self.changed) then
+		self.is_on = state
 
-	--	mset(self.position.x, self.position.y, self.is_on and self.sprite[1] or self.sprite[2])
-	-- end
+		for connected_door in all(self.connected_doors) do
+			connected_door.is_open = state
+		end
+
+		mset(self.position.x, self.position.y, self.is_on and self.sprite[2] or self.sprite[1])
+	end
 end
+
+-- switch
+
 
 
 -->8
@@ -473,17 +480,18 @@ function load_level1()
 	-- TODO the init should add a pressure plate and a door somewhere
 	-- the update function can then check for the plate to collide with the player
 	-- and change the state of the door to open.
-	
-	-- trying to let door and pressure plate be their own "class" to make state updates/references cleaner
-	-- there's an issue with the scope of self when init/updating though. go.init() wont pass self to init(), but changing to go:init() seems to break player
 
-	local door1 = create_door({x = 16, y = 11})
+	local door1 = create_door({x = 7, y = 5})
+	local door2 = create_door({x = 8, y = 5})
 	local pressure_plate1 = create_pressure_plate({x = 5, y = 5}, { door1 })
+	local pressure_plate2 = create_pressure_plate({x = 5, y = 6}, { door1, door2})
 
 	local level1 = {
 		tree1,
 		door1,
+		door2,
 		pressure_plate1,
+		pressure_plate2
 	}
 
 	level_loader:load_level_objects(level1)
@@ -494,7 +502,7 @@ function level_loader:load_level_objects(level_objects)
 	self:unload_level_objects()
 	self.current_level = level_objects
 	for go in all(level_objects) do
-		go.init()
+		go:init()
 		add(game_objects, go)
 	end
 end
@@ -502,7 +510,7 @@ end
 function level_loader:unload_level_objects()
 	if self.current_level == nil then return end
 	for go in all(self.current_level) do
-		go.init()
+		go:init()
 		remove(game_objects, go)
 	end
 end
@@ -643,14 +651,14 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0009a0000009a00a0a09a0a00909a00000a0a0a000a0a0a000a0a0a000a0a0a00000000000000000000000000000000000000000000000000000000000000000
-0099a0009099a0a00099a0000099a009009c9c90009c9c90009c9c90009c9c900000000000000000000000000000000000000000000000000000000000000000
-004990000049900000499090004990a0011111100111111001111110011111100000000000000000000000000000000000000000000000000000000000000000
-00009000a000900a9000900000009000011111100111111001111110011111100000000000000000000000000000000000000000000000000000000000000000
-00999a0000999a0000999a0000999a09057777500577bb50057bb75005bb77500000000000000000000000000000000000000000000000000000000000000000
-049999a0049999a0049999a0a49999a0055500500555005005550050055580500000000000000000000000000000000000000000000000000000000000000000
-049009a0049009a0049009a0049009a0055555500555555005555550055555500000000000000000000000000000000000000000000000000000000000000000
-00499900a04999000049990a00499900000055500000555000005550000055500000000000000000000000000000000000000000000000000000000000000000
+0009a0000009a00a0a09a0a00909a00000a0a0a000a0a0a000a0a0a000a0a0a022222222bbbbbbbb000000000000000000000000000000000000000000000000
+0099a0009099a0a00099a0000099a009009c9c90009c9c90009c9c90009c9c9026677772b665555b000000000000000000000000000000000000000000000000
+004990000049900000499090004990a00111111001111110011111100111111026666672b666665b000000000000000000000000000000000000000000000000
+00009000a000900a90009000000090000111111001111110011111100111111025666672b766665b000000000000000000000000000000000000000000000000
+00999a0000999a0000999a0000999a09057777500577bb50057bb75005bb775025666672b766665b000000000000000000000000000000000000000000000000
+049999a0049999a0049999a0a49999a00555005005550050055500500555805025666662b766666b000000000000000000000000000000000000000000000000
+049009a0049009a0049009a0049009a00555555005555550055555500555555025555662b777766b000000000000000000000000000000000000000000000000
+00499900a04999000049990a004999000000555000005550000055500000555022222222bbbbbbbb000000000000000000000000000000000000000000000000
 __gff__
 0000808080000000000000000000000000008080800000000000000000000000000080808000000000000000000000000000000000000000000000000000000000000000000000000000000000000000808080800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000810000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
