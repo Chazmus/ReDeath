@@ -53,6 +53,7 @@ function _update()
 	end)
 
 	-- Input utils update MUST be done last
+	
 	input_utils:update()
 end
 
@@ -64,6 +65,12 @@ function _draw()
 		if go.draw != nil then
 			go:draw()
 		end
+	end
+
+	if (player_list.player2 == nil) then
+		print("Moves: "..tostr(player_list.player1.remaining_steps), 3 + game_state.room_vars.room_offset.x, 3 + game_state.room_vars.room_offset.y, 8)
+	elseif (player_list.player1 != nil) then
+		print("Moves: "..tostr(player_list.player2.remaining_steps), 3 + game_state.room_vars.room_offset.x, 3 + game_state.room_vars.room_offset.y, 12)
 	end
 end
 
@@ -91,12 +98,13 @@ function next_room()
 	game_state.room_number += 1
 	del(game_objects, player_list.player1)
 	del(game_objects, player_list.player2)
+	player_list.player2 = nil
 
 	-- set vars, objects, player, and camera
 	game_state.room_vars = room_vars_list[game_state.room_number]
 	levels[tostr(game_state.room_number)]()
-	player_list.player1 = spawn_player({x = game_state.room_vars.starting_position.x, y = game_state.room_vars.starting_position.y})
-	camera(game_state.room_vars.camera_position.x, game_state.room_vars.camera_position.y)
+	player_list.player1 = spawn_player(grid_to_pixel_offset(game_state.room_vars.starting_position))
+	camera(game_state.room_vars.room_offset.x, game_state.room_vars.room_offset.y)
 end
 
 -->8
@@ -132,7 +140,7 @@ function player_base:rewind_time()
 				self.is_alive = false
 				self:undo_all_commands(
 					function()
-						local player2 = spawn_player({x = game_state.room_vars.starting_position.x, y = game_state.room_vars.starting_position.y})
+						local player2 = spawn_player(grid_to_pixel_offset(game_state.room_vars.starting_position))
 						player_list.player2 = player2
 						reset_room_for_player2()
 					end)
@@ -198,6 +206,7 @@ function player_base:update()
 			-- limit number of steps, force rewind if step limit is reached
 			--if (self == player_list.player2 or player_list.player2 == nil) then
 				self.remaining_steps -= 1
+				print(tostr(self.remaining_steps), 10, 10, 12)
 				printh("remaining steps: "..tostr(self.remaining_steps))
 				if (self.remaining_steps <= 0) then
 					self:rewind_time()()
@@ -356,6 +365,14 @@ function pixel_to_grid(grid_position)
 	return {x=(grid_position.x / 8), y=(grid_position.y / 8)}
 end
 
+function grid_to_pixel_offset(grid_position)
+	return {x = (grid_position.x * 8) + game_state.room_vars.room_offset.x, y = (grid_position.y * 8) + game_state.room_vars.room_offset.y}
+end
+
+function grid_to_grid_offset(grid_position)
+	return {x = grid_position.x + (game_state.room_vars.room_offset.x / 8), y = grid_position.y + (game_state.room_vars.room_offset.y / 8)}
+end
+
 collisionlayer = { 7 }
 
 function check_for_collision(grid_position)
@@ -376,7 +393,7 @@ end
 door = {}
 function create_door(pos, starting_state)
 	local new_door = door:new{
-		position = pos,
+		position = grid_to_grid_offset(pos),
 		is_open = starting_state,
 		has_key = false,
 		sprite = {133,134},
@@ -454,7 +471,7 @@ pickup_key = {}
 function create_pickup_key(pos, doors)
 	local new_pickup_key = pickup_key:new{
 		is_picked_up = false,
-		position = pos,
+		position = grid_to_grid_offset(pos),
 		sprite = {176},
 		connected_doors = doors,
 	}
@@ -496,7 +513,7 @@ function create_toggle_switch(pos, doors)
 	local new_toggle_switch = toggle_switch:new{
 		is_active = false,
 		is_player_here = false,
-		position = pos,
+		position = grid_to_grid_offset(pos),
 		sprite = {184,185},
 		connected_doors = doors,
 	}
@@ -537,7 +554,7 @@ end
 exit_block = {}
 function create_exit_block(pos, orientation)
 	local new_exit_block = exit_block:new{
-		position = pos,
+		position = grid_to_grid_offset(pos),
 		sprite = {140},
 		orientation = orientation
 	}
@@ -602,8 +619,8 @@ levels = {}
 
 -- player starting position and total steps allowed
 room_vars_list = {
-	{ starting_position = grid_to_pixel({x = 8, y = 3}), camera_position = {x = 0, y =0 },  total_steps = 20 }, -- room 1
-	{ starting_position = grid_to_pixel({x = 24, y = 1}), camera_position = {x = 128, y = 0}, total_steps = 35} -- room 2 -- screen size is 128*128 pixels or 16*16 cells, must account for overall map location
+	{ room_offset = {x = 0, y = 0}, starting_position = {x = 8, y = 3},  total_steps = 20 }, -- room 1
+	{ room_offset = {x = 128, y = 0}, starting_position = {x = 8, y = 1}, total_steps = 35} -- room 2
 
 }
 
@@ -648,16 +665,16 @@ levels["1"] = function()
 end
 
 levels["2"] = function()
+	
+	local door1 = create_door({x = 9, y = 3}, false)
+	local door2 = create_door({x = 7, y = 5}, false)
+	local door3 = create_door({x = 8, y = 5}, false)
 
-	local door1 = create_door({x = 25, y = 3}, false)
-	local door2 = create_door({x = 23, y = 5}, false)
-	local door3 = create_door({x = 24, y = 5}, false)
+	local key1 = create_pickup_key({x = 2, y = 12}, { door1 })
+	local key2 = create_pickup_key({x = 13, y = 2}, { door2, door3 })
 
-	local key1 = create_pickup_key({x = 18, y = 12}, { door1 })
-	local key2 = create_pickup_key({x = 29, y = 2}, { door2, door3 })
-
-	local exit1 = create_exit_block({x = 23, y = 15}, 2)
-	local exit2 = create_exit_block({x = 24, y = 15}, 2)
+	local exit1 = create_exit_block({x = 7, y = 15}, 2)
+	local exit2 = create_exit_block({x = 8, y = 15}, 2)
 
 	-- add objects to level
 	local level2 = {
